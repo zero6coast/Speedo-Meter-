@@ -208,16 +208,19 @@ function renderIndicators() {
 
 function setLeftIndicator(state) {
   const next = parseBoolState(state);
-  if (next === isLeftIndicatorOn) return;
-  isLeftIndicatorOn = next;
-  renderIndicators();
+  if (next !== isLeftIndicatorOn) {
+    isLeftIndicatorOn = next;
+    renderIndicators();
+  }
 }
 
-function setRightIndicator(state) {
-  const next = parseBoolState(state);
-  if (next === isRightIndicatorOn) return;
-  isRightIndicatorOn = next;
-  renderIndicators();
+function setRightIndicator(state, altRight) {
+  const raw = altRight !== undefined ? altRight : state;
+  const next = parseBoolState(raw);
+  if (next !== isRightIndicatorOn) {
+    isRightIndicatorOn = next;
+    renderIndicators();
+  }
 }
 
 function setIndicators(leftState, rightState) {
