@@ -1,4 +1,18 @@
-@import url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css');
+@font-face {
+  font-family: 'DSEG7Classic';
+  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-BoldItalic.woff2') format('woff2');
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DSEG14Classic';
+  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG14-Classic/DSEG14Classic-BoldItalic.woff2') format('woff2');
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
 
 * {
   box-sizing: border-box;
@@ -12,7 +26,7 @@ html, body {
   height: 100%;
   background: transparent !important;
   overflow: hidden;
-  font-family: 'DSEG14Classic', sans-serif;
+  font-family: 'DSEG14Classic', monospace;
 }
 
 .holo-wrapper {
@@ -76,6 +90,7 @@ html, body {
 }
 
 .gear-text {
+  font-family: 'DSEG14Classic', monospace;
   font-size: 20px;
   font-weight: bold;
   font-style: italic;
@@ -90,6 +105,7 @@ html, body {
 }
 
 .unit-text {
+  font-family: 'DSEG14Classic', monospace;
   font-size: 20px;
   font-weight: bold;
   font-style: italic;
@@ -120,6 +136,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
+  font-family: 'DSEG14Classic', monospace;
   font-size: 11px;
   font-style: italic;
   letter-spacing: 1px;
@@ -149,6 +166,7 @@ html, body {
 .odo-mini {
   margin-top: 4px;
   text-align: right;
+  font-family: 'DSEG14Classic', monospace;
   font-size: 9px;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.45);
