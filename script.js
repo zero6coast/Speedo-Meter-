@@ -1,84 +1,72 @@
-// Universal Parser: Mendukung format data langsung maupun nested (data / payload / vehicle)
-function extractVehicleMetrics(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  // Jika server membungkus data di dalam properti data, payload, vehicle, atau detail
-  const nested = raw.data || raw.payload || raw.vehicle || raw.stats || raw.detail;
-  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-    return Object.assign({}, raw, nested);
-  }
-  return raw;
+// =========================================================================
+// JGVRP HOLOGRAM SPEEDOMETER — NATIVE DOM OBSERVER & TELEMETRY SYNC
+// =========================================================================
+
+function parseNumeric(raw) {
+  if (raw === undefined || raw === null) return null;
+  const cleaned = String(raw).replace(/[^0-9.-]/g, '');
+  if (cleaned === '' || cleaned === '-') return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
 }
 
-function applySpeedoData(rawInput) {
-  const d = extractVehicleMetrics(rawInput);
-  if (!d) return;
+function updateHologramUI(data) {
+  if (!data) return;
 
-  const container = document.getElementById('speedoContainer');
-  if (container && container.classList.contains('hidden')) {
-    container.classList.remove('hidden');
+  // 1. Kecepatan (Speed 3 Digit: e.g. 014)
+  if (data.speed !== null && data.speed !== undefined) {
+    const spd = Math.max(0, Math.min(999, Math.round(data.speed)));
+    document.getElementById('speedValue').textContent = String(spd).padStart(3, '0');
   }
 
-  // 1. Kecepatan (Mendukung speed, Speed, velocity, kmh, kph, mph)
-  let speedVal = d.speed ?? d.Speed ?? d.kmh ?? d.kph ?? d.mph ?? d.velocity;
-  if (speedVal !== undefined && speedVal !== null) {
-    speedVal = Number(speedVal);
-    // Jika server mengirim m/s mentah (biasanya ada flag isMs atau unit m/s)
-    if (d.unit === 'ms' || d.unit === 'm/s') speedVal = speedVal * 3.6;
-    const speedStr = String(Math.max(0, Math.min(999, Math.round(speedVal)))).padStart(3, '0');
-    document.getElementById('speedValue').textContent = speedStr;
+  // 2. Satuan (KPH / MPH)
+  if (data.unit) {
+    document.getElementById('unitValue').textContent = data.unit;
   }
 
-  // 2. Gear (Mendukung gear, Gear, currentGear)
-  const rawGear = d.gear ?? d.Gear ?? d.currentGear;
-  if (rawGear !== undefined && rawGear !== null) {
-    const g = String(rawGear).toUpperCase();
-    const gearLabel = (g === '0' && Number(speedVal || 0) > 0) ? 'R' : (g === '0' ? 'N' : g);
-    document.getElementById('gearValue').textContent = 'GEAR ' + gearLabel;
+  // 3. Gear (GEAR 1, R, N, dll.)
+  if (data.gear !== null && data.gear !== undefined && data.gear !== '') {
+    let g = String(data.gear).trim().toUpperCase();
+    if (g === '0') g = (data.speed && data.speed > 0) ? 'R' : 'N';
+    document.getElementById('gearValue').textContent = 'GEAR ' + g;
   }
 
-  // 3. Satuan KPH / MPH
-  if (d.unit || d.speedUnit || d.isMph !== undefined) {
-    const unitText = d.unit || d.speedUnit || (d.isMph ? 'MPH' : 'KPH');
-    document.getElementById('unitValue').textContent = String(unitText).toUpperCase();
+  // 4. RPM Bar (JGVRP mengirim RPM dalam skala 0 - 8000 atau 0.0 - 1.0)
+  if (data.rpm !== null && data.rpm !== undefined) {
+    let rpmPct = data.rpm;
+    if (rpmPct > 100) {
+      rpmPct = (rpmPct / 8000) * 100;
+    } else if (rpmPct > 0 && rpmPct <= 1.05) {
+      rpmPct = rpmPct * 100;
+    }
+    rpmPct = Math.max(0, Math.min(100, rpmPct));
+    const rpmFill = document.getElementById('rpmFill');
+    rpmFill.style.width = rpmPct + '%';
+    if (rpmPct >= 88) {
+      rpmFill.style.background = '#ff3b4e';
+      rpmFill.style.boxShadow = '0 0 12px rgba(255, 59, 78, 0.95)';
+    } else {
+      rpmFill.style.background = '#ffffff';
+      rpmFill.style.boxShadow = '0 0 12px rgba(255, 255, 255, 0.95)';
+    }
   }
 
-  // 4. RPM (Mendukung skala 0.0-1.0 maupun 0-100 atau 0-10000)
-  const rawRpm = d.rpm ?? d.RPM ?? d.currentRpm;
-  if (rawRpm !== undefined && rawRpm !== null) {
-    let rpmPct = Number(rawRpm);
-    if (rpmPct > 0 && rpmPct <= 1.05) rpmPct = rpmPct * 100;
-    else if (rpmPct > 100) rpmPct = (rpmPct / 10000) * 100;
-    document.getElementById('rpmFill').style.width = Math.max(0, Math.min(100, rpmPct)) + '%';
-  }
-
-  // 5. Indikator HBK (Handbrake) & ABS
-  const hbkVal = d.hbk ?? d.handbrake ?? d.Handbrake ?? d.brake;
-  if (hbkVal !== undefined) {
-    document.getElementById('indHbk').className = Boolean(hbkVal) ? 'ind-text active' : 'ind-text dim';
-  }
-
-  const absVal = d.abs ?? d.ABS ?? d.braking ?? d.isBraking;
-  if (absVal !== undefined) {
-    document.getElementById('indAbs').className = Boolean(absVal) ? 'ind-text active' : 'ind-text dim';
-  }
-
-  // 6. Bensin / Fuel (Mendukung fuel, Fuel, fuelLevel, petrol)
-  const rawFuel = d.fuel ?? d.Fuel ?? d.fuelLevel ?? d.petrol;
-  if (rawFuel !== undefined && rawFuel !== null) {
-    let fuel = Number(rawFuel);
+  // 5. Bensin / Fuel (0 - 100%)
+  if (data.fuel !== null && data.fuel !== undefined) {
+    let fuel = data.fuel;
     if (fuel > 0 && fuel <= 1) fuel = fuel * 100;
     fuel = Math.max(0, Math.min(100, Math.round(fuel)));
     document.getElementById('fuelText').textContent = fuel + '%';
     document.getElementById('fuelFill').style.width = fuel + '%';
   }
 
-  // 7. Health Kendaraan / Engine (Mendukung health, engine, engineHealth, bodyHealth, vehicleHealth)
-  const rawEngInput = d.health ?? d.engine ?? d.engineHealth ?? d.vehicleHealth ?? d.bodyHealth;
-  if (rawEngInput !== undefined && rawEngInput !== null) {
-    let rawEng = Number(rawEngInput);
-    if (rawEng > 100) rawEng = (rawEng / 1000) * 100;
-    else if (rawEng > 0 && rawEng <= 1) rawEng = rawEng * 100;
-    const hp = Math.max(0, Math.min(100, Math.round(rawEng)));
+  // 6. Health Kendaraan / Engine (0 - 100% atau 0 - 1000)
+  if (data.health !== null && data.health !== undefined) {
+    let hp = data.health;
+    if (hp > 100) hp = (hp / 1000) * 100;
+    else if (hp > 0 && hp <= 1) hp = hp * 100;
+    hp = Math.max(0, Math.min(100, Math.round(hp)));
+
     document.getElementById('healthText').textContent = hp + '%';
     const hpFill = document.getElementById('healthFill');
     const engLabel = document.getElementById('engLabel');
@@ -95,29 +83,92 @@ function applySpeedoData(rawInput) {
       engLabel.className = 'stat-label green';
     }
   }
+
+  // 7. Indikator HBK (Handbrake / Engine Off) & ABS (Braking)
+  if (data.hbk !== undefined) {
+    document.getElementById('indHbk').className = data.hbk ? 'ind-text active' : 'ind-text dim';
+  }
+  if (data.abs !== undefined) {
+    document.getElementById('indAbs').className = data.abs ? 'ind-text active' : 'ind-text dim';
+  }
 }
 
-// Listener utama untuk pesan postMessage dari JGVRP / FiveM NUI
+// =========================================================================
+// PEMBACA DATA LANGSUNG DARI ELEMEN TERSEMBUNYI JGVRP (<dd id='...'>)
+// =========================================================================
+let lastSpeed = 0;
+
+function readJgvrpDomSource() {
+  const speedEl = document.getElementById('speed');
+  const rpmEl = document.getElementById('rpm');
+  const fuelEl = document.getElementById('fuel');
+  const healthEl = document.getElementById('health');
+  const gearEl = document.getElementById('gear');
+  const engineEl = document.getElementById('engine');
+
+  if (!speedEl) return;
+
+  const rawSpeedText = speedEl.textContent.trim();
+  const speedNum = parseNumeric(rawSpeedText);
+  const rpmNum = rpmEl ? parseNumeric(rpmEl.textContent) : null;
+  const fuelNum = fuelEl ? parseNumeric(fuelEl.textContent) : null;
+  const healthNum = healthEl ? parseNumeric(healthEl.textContent) : null;
+  const gearText = gearEl ? gearEl.textContent.trim() : '';
+  const engineText = engineEl ? engineEl.textContent.trim().toLowerCase() : '';
+
+  // Deteksi satuan otomatis dari teks kecepatan JGVRP (km/h, kph, atau mph)
+  let detectedUnit = 'KPH';
+  if (/mph/i.test(rawSpeedText)) detectedUnit = 'MPH';
+
+  // Deteksi HBK aktif jika mobil berhenti & mesin mati / parkir, ABS jika deselerasi cepat
+  const isEngineOff = (engineText === 'off' || engineText === 'false' || engineText === '0');
+  const isHbk = isEngineOff || ((speedNum === 0) && (rpmNum !== null && rpmNum < 950));
+  const isAbs = (speedNum !== null && lastSpeed - speedNum >= 6 && speedNum > 15);
+  if (speedNum !== null) lastSpeed = speedNum;
+
+  updateHologramUI({
+    speed: speedNum,
+    unit: detectedUnit,
+    rpm: rpmNum,
+    fuel: fuelNum,
+    health: healthNum,
+    gear: gearText,
+    hbk: isHbk,
+    abs: isAbs
+  });
+}
+
+// Jalankan loop pembacaan halus (60 FPS) & MutationObserver pada .data-source
+function startJgvrpSync() {
+  const dataSource = document.querySelector('.data-source');
+  if (dataSource) {
+    const observer = new MutationObserver(readJgvrpDomSource);
+    observer.observe(dataSource, { childList: true, subtree: true, characterData: true });
+  }
+  setInterval(readJgvrpDomSource, 50);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startJgvrpSync);
+} else {
+  startJgvrpSync();
+}
+
+// Tetap dukung postMessage jika server mengirim event JSON tambahan
 window.addEventListener('message', function (event) {
-  let data = event.data;
-  if (typeof data === 'string') {
-    try { data = JSON.parse(data); } catch (e) { return; }
+  let d = event.data;
+  if (typeof d === 'string') {
+    try { d = JSON.parse(d); } catch (e) { return; }
   }
-  if (!data) return;
-
-  const msgType = data.action || data.type || data.event;
-  if (msgType === 'toggle' || msgType === 'setVisible' || msgType === 'show') {
-    const container = document.getElementById('speedoContainer');
-    const isVisible = data.show ?? data.visible ?? data.status ?? true;
-    if (isVisible) container.classList.remove('hidden');
-    else container.classList.add('hidden');
-    return;
-  }
-
-  applySpeedoData(data);
+  if (!d || typeof d !== 'object') return;
+  const payload = d.data || d.payload || d;
+  updateHologramUI({
+    speed: parseNumeric(payload.speed ?? payload.Speed),
+    rpm: parseNumeric(payload.rpm ?? payload.RPM),
+    fuel: parseNumeric(payload.fuel ?? payload.Fuel),
+    health: parseNumeric(payload.health ?? payload.Health ?? payload.engineHealth),
+    gear: payload.gear ?? payload.Gear,
+    hbk: payload.hbk ?? payload.handbrake,
+    abs: payload.abs ?? payload.braking
+  });
 });
-
-// Ekspos fungsi global jika JGVRP memanggil fungsi JS langsung di dalam iframe/CEF
-window.updateSpeedometer = applySpeedoData;
-window.updateHUD = applySpeedoData;
-window.setSpeedoData = applySpeedoData;
