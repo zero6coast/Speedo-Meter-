@@ -1,12 +1,69 @@
 // =========================================================================
 // JGVRP OFFICIAL SPEEDOMETER API — 3D HOLOGRAM (BELT, LAMP & SIGNALS)
 // =========================================================================
-
 let speedMode = 0;
 let lastRawSpeedMs = 0;
 let currentSpeedConverted = 0;
 let isEngineOn = false;
 let isSeatbeltOn = false;
+let chimeAudioCtx = null;
+let chimeTimer = null;
+
+// Bunyi chime peringatan seatbelt khas Porsche Macan/992/Taycan (Web Audio API)
+function playSeatbeltChime() {
+  if (isSeatbeltOn || (!isEngineOn && currentSpeedConverted <= 0)) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!chimeAudioCtx) chimeAudioCtx = new AudioCtx();
+    if (chimeAudioCtx.state === 'suspended') chimeAudioCtx.resume();
+
+    const now = chimeAudioCtx.currentTime;
+    const notes = [
+      { t: 0.00, f1: 659.25, f2: 1318.51, dur: 0.42, vol: 0.14 },
+      { t: 0.22, f1: 493.88, f2: 987.77,  dur: 0.42, vol: 0.13 },
+      { t: 0.44, f1: 415.30, f2: 830.61,  dur: 0.46, vol: 0.13 },
+      { t: 0.72, f1: 659.25, f2: 987.77,  dur: 0.85, vol: 0.15 }
+    ];
+
+    notes.forEach((n) => {
+      [n.f1, n.f2].forEach((freq, idx) => {
+        const osc = chimeAudioCtx.createOscillator();
+        const gain = chimeAudioCtx.createGain();
+        const filter = chimeAudioCtx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + n.t);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1800, now + n.t);
+
+        const peak = idx === 0 ? n.vol : n.vol * 0.38;
+        gain.gain.setValueAtTime(0.0001, now + n.t);
+        gain.gain.linearRampToValueAtTime(peak, now + n.t + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + n.t + n.dur);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(chimeAudioCtx.destination);
+
+        osc.start(now + n.t);
+        osc.stop(now + n.t + n.dur + 0.03);
+      });
+    });
+  } catch (e) {}
+}
+
+function syncSeatbeltChimeLoop() {
+  const shouldWarn = !isSeatbeltOn && (isEngineOn || currentSpeedConverted > 0);
+  if (shouldWarn && !chimeTimer) {
+    playSeatbeltChime();
+    chimeTimer = setInterval(playSeatbeltChime, 2400);
+  } else if (!shouldWarn && chimeTimer) {
+    clearInterval(chimeTimer);
+    chimeTimer = null;
+  }
+}
 
 function updateSeatbeltIndicator() {
   const beltEl = document.getElementById('indBelt');
@@ -18,6 +75,7 @@ function updateSeatbeltIndicator() {
   } else {
     beltEl.className = 'ind-text dim';
   }
+  syncSeatbeltChimeLoop();
 }
 
 function setEngine(state) {
