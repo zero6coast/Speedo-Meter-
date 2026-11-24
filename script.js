@@ -183,18 +183,55 @@ function setHeadlights(state) {
   else lampEl.className = 'ind-text dim';
 }
 
-function setLeftIndicator(state) {
+let isLeftIndicatorOn = false;
+let isRightIndicatorOn = false;
+
+function parseBoolState(val) {
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val > 0;
+  if (typeof val === 'string') return ['true', '1', 'on', 'yes'].includes(val.trim().toLowerCase());
+  return false;
+}
+
+function renderIndicators() {
   const leftEl = document.getElementById('indLeft');
-  if (leftEl) leftEl.className = state ? 'turn-arrow active' : 'turn-arrow dim';
+  const rightEl = document.getElementById('indRight');
+  if (leftEl) {
+    const targetLeft = isLeftIndicatorOn ? 'turn-arrow active' : 'turn-arrow dim';
+    if (leftEl.className !== targetLeft) leftEl.className = targetLeft;
+  }
+  if (rightEl) {
+    const targetRight = isRightIndicatorOn ? 'turn-arrow active' : 'turn-arrow dim';
+    if (rightEl.className !== targetRight) rightEl.className = targetRight;
+  }
+}
+
+function setLeftIndicator(state) {
+  const next = parseBoolState(state);
+  if (next === isLeftIndicatorOn) return;
+  isLeftIndicatorOn = next;
+  renderIndicators();
 }
 
 function setRightIndicator(state) {
-  const rightEl = document.getElementById('indRight');
-  if (rightEl) rightEl.className = state ? 'turn-arrow active' : 'turn-arrow dim';
+  const next = parseBoolState(state);
+  if (next === isRightIndicatorOn) return;
+  isRightIndicatorOn = next;
+  renderIndicators();
+}
+
+function setIndicators(leftState, rightState) {
+  if (typeof leftState === 'number' && rightState === undefined) {
+    setLeftIndicator(leftState === 1 || leftState === 3);
+    setRightIndicator(leftState === 2 || leftState === 3);
+    return;
+  }
+  setLeftIndicator(leftState);
+  setRightIndicator(rightState);
 }
 
 function setSeatbelts(state) {
-  isSeatbeltOn = Boolean(state);
+  isSeatbeltOn = parseBoolState(state);
   updateSeatbeltIndicator();
 }
 
@@ -222,6 +259,15 @@ window.setGear = setGear;
 window.setHeadlights = setHeadlights;
 window.setLeftIndicator = setLeftIndicator;
 window.setRightIndicator = setRightIndicator;
+window.setIndicators = setIndicators;
 window.setSeatbelts = setSeatbelts;
 window.setSpeedMode = setSpeedMode;
 window.setOdometer = setOdometer;
+
+window.addEventListener('message', (event) => {
+  const d = event.data;
+  if (!d || typeof d !== 'object') return;
+  if ('leftIndicator' in d) setLeftIndicator(d.leftIndicator);
+  if ('rightIndicator' in d) setRightIndicator(d.rightIndicator);
+  if ('indicators' in d) setIndicators(d.indicators);
+});
