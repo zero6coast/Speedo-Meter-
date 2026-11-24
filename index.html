@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JGVRP Hologram Speedometer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="speedoContainer" class="holo-wrapper">
+    <div class="holo-hud">
+      <div class="top-row">
+        <div class="speed-box">
+          <span class="speed-bg">888</span>
+          <span id="speedValue" class="speed-fg">014</span>
+        </div>
+        <div class="indicators">
+          <span id="indHbk" class="ind-text active">HBK</span>
+          <span id="indAbs" class="ind-text dim">ABS</span>
+        </div>
+      </div>
+      <div class="mid-row">
+        <span id="gearValue" class="gear-text">GEAR 1</span>
+        <span id="unitValue" class="unit-text">KPH</span>
+      </div>
+      <div class="rpm-track">
+        <div id="rpmFill" class="rpm-fill" style="width: 24%;"></div>
+      </div>
+      <div class="bottom-stats">
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label cyan">FUEL</span>
+            <span id="fuelText" class="stat-val">100%</span>
+          </div>
+          <div class="stat-track">
+            <div id="fuelFill" class="stat-fill fuel-color" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-header">
+            <span id="engLabel" class="stat-label green">ENG</span>
+            <span id="healthText" class="stat-val">100%</span>
+          </div>
+          <div class="stat-track">
+            <div id="healthFill" class="stat-fill health-color" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
