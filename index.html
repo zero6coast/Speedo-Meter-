@@ -9,67 +9,41 @@
 <body>
   <div id="speedoContainer" class="holo-wrapper">
     <div class="holo-hud">
+      <!-- Baris Atas: Angka Kecepatan 3 Digit Bersih (Tanpa HBK & ABS) -->
       <div class="top-row">
         <div class="speed-box">
-          <span class="speed-bg">888</span>
           <span id="speedValue" class="speed-fg">014</span>
         </div>
-        <div class="indicators">
-          <span id="indHbk" class="ind-text active">HBK</span>
-          <span id="indAbs" class="ind-text dim">ABS</span>
-        </div>
       </div>
+
+      <!-- Baris Tengah: Sein Kiri, GEAR 1, Sein Kanan & KPH -->
       <div class="mid-row">
-        <span id="gearValue" class="gear-text">GEAR 1</span>
+        <div class="gear-turn-group">
+          <span id="indLeft" class="turn-arrow dim">&#9664;</span>
+          <span id="gearValue" class="gear-text">GEAR 1</span>
+          <span id="indRight" class="turn-arrow dim">&#9654;</span>
+        </div>
         <span id="unitValue" class="unit-text">KPH</span>
       </div>
+
+      <!-- Garis RPM Putih Tunggal -->
       <div class="rpm-track">
         <div id="rpmFill" class="rpm-fill" style="width: 24%;"></div>
       </div>
-      <div class="bottom-stats">
-        <div class="stat-item">
-          <div class="stat-header">
-            <span class="stat-label cyan">FUEL</span>
-            <span id="fuelText" class="stat-val">100%</span>
-          </div>
-          <div class="stat-track">
-            <div id="fuelFill" class="stat-fill fuel-color" style="width: 100%;"></div>
-          </div>
+
+      <!-- Baris Bawah Minimalis: BELT, LAMP, FUEL & ENG -->
+      <div class="mini-status-row">
+        <div class="mini-group">
+          <span id="indBelt" class="ind-text warn">BELT</span>
+          <span id="indLamp" class="ind-text dim">LAMP</span>
         </div>
-        <div class="stat-item">
-          <div class="stat-header">
-            <span id="engLabel" class="stat-label green">ENG</span>
-            <span id="healthText" class="stat-val">100%</span>
-          </div>
-          <div class="stat-track">
-            <div id="healthFill" class="stat-fill health-color" style="width: 100%;"></div>
-          </div>
+        <div class="mini-group">
+          <span class="mini-stat cyan">FUEL <b id="fuelText">100%</b></span>
+          <span id="engLabel" class="mini-stat green">ENG <b id="healthText">100%</b></span>
         </div>
       </div>
+      <div id="odoText" class="odo-mini">0000.0 MI</div>
     </div>
-  </div>
-
-  <!-- ================= SUMBER DATA JGVRP NATIVE (HIDDEN) ================= -->
-  <!-- JGVRP menyuntikkan data kendaraan langsung ke dalam tag <dd> di bawah ini -->
-  <div class="data-source" hidden style="display:none !important;">
-    <section>
-      <dl>
-        <dt>Engine</dt>      <dd id="engine">&nbsp;</dd>
-        <dt>Speed</dt>       <dd id="speed">&nbsp;</dd>
-        <dt>RPM</dt>         <dd id="rpm">&nbsp;</dd>
-        <dt>Fuel</dt>        <dd id="fuel">&nbsp;</dd>
-        <dt>Health</dt>      <dd id="health">&nbsp;</dd>
-      </dl>
-    </section>
-    <section>
-      <dl>
-        <dt>Gear</dt>        <dd id="gear">&nbsp;</dd>
-        <dt>Headlights</dt>  <dd id="headlights">&nbsp;</dd>
-        <dt>Indicators</dt>  <dd id="indicators">&nbsp;</dd>
-        <dt>Seatbelts</dt>   <dd id="seatbelts">&nbsp;</dd>
-        <dt>Odometer</dt>    <dd id="odometer">&nbsp;</dd>
-      </dl>
-    </section>
   </div>
 
   <script src="script.js"></script>
