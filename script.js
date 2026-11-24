@@ -6,13 +6,10 @@ let lastRawSpeedMs = 0;
 let currentSpeedConverted = 0;
 let isEngineOn = false;
 let isSeatbeltOn = false;
-let chimeAudioEl = null;
-let chimeAudioCtx = null;
 let chimeTimer = null;
 
-// Membangkitkan file WAV chime Porsche Macan/992/Taycan secara langsung di memori
-// Menggunakan elemen <audio> agar tidak diblokir autoplay CEF FiveM / JGVRP
-function buildPorscheChimeWavUrl() {
+// Membangkitkan data URI WAV chime Porsche Macan/992/Taycan
+function buildPorscheChimeDataUrl() {
   const sampleRate = 22050;
   const duration = 1.65;
   const numSamples = Math.floor(sampleRate * duration);
@@ -37,10 +34,10 @@ function buildPorscheChimeWavUrl() {
   view.setUint32(40, numSamples * 2, true);
 
   const notes = [
-    { start: 0.00, dur: 0.42, f1: 659.25, f2: 1318.51, amp: 0.28 },
-    { start: 0.22, dur: 0.42, f1: 493.88, f2: 987.77,  amp: 0.26 },
-    { start: 0.44, dur: 0.46, f1: 415.30, f2: 830.61,  amp: 0.26 },
-    { start: 0.72, dur: 0.88, f1: 659.25, f2: 987.77,  amp: 0.30 }
+    { start: 0.00, dur: 0.42, f1: 659.25, f2: 1318.51, amp: 0.34 },
+    { start: 0.22, dur: 0.42, f1: 493.88, f2: 987.77,  amp: 0.32 },
+    { start: 0.44, dur: 0.46, f1: 415.30, f2: 830.61,  amp: 0.32 },
+    { start: 0.72, dur: 0.88, f1: 659.25, f2: 987.77,  amp: 0.36 }
   ];
 
   for (let i = 0; i < numSamples; i++) {
@@ -61,79 +58,52 @@ function buildPorscheChimeWavUrl() {
     view.setInt16(44 + i * 2, sample * 32767, true);
   }
 
-  const blob = new Blob([buffer], { type: 'audio/wav' });
-  return URL.createObjectURL(blob);
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return 'data:audio/wav;base64,' + btoa(binary);
 }
 
-function ensureChimeAudio() {
-  if (!chimeAudioEl) {
-    chimeAudioEl = new Audio(buildPorscheChimeWavUrl());
-    chimeAudioEl.volume = 0.85;
+function getSeatbeltAudioElement() {
+  let el = document.getElementById('seatbeltSound');
+  if (!el) {
+    el = document.createElement('audio');
+    el.id = 'seatbeltSound';
+    document.body.appendChild(el);
   }
-}
-
-function unlockAudioContext() {
-  ensureChimeAudio();
-  if (chimeAudioCtx && chimeAudioCtx.state === 'suspended') {
-    chimeAudioCtx.resume().catch(() => {});
+  if (!el.src) {
+    el.src = buildPorscheChimeDataUrl();
+    el.volume = 1.0;
   }
+  return el;
 }
-['pointerdown', 'keydown', 'touchstart'].forEach((evt) => {
-  window.addEventListener(evt, unlockAudioContext, { passive: true });
-});
 
 function playSeatbeltChime() {
   if (isSeatbeltOn) return;
   try {
-    ensureChimeAudio();
-    chimeAudioEl.currentTime = 0;
-    const playPromise = chimeAudioEl.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        // Fallback Web Audio API jika <audio> ditahan
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        if (!chimeAudioCtx) chimeAudioCtx = new AudioCtx();
-        if (chimeAudioCtx.state === 'suspended') chimeAudioCtx.resume();
-        const now = chimeAudioCtx.currentTime;
-        [659.25, 493.88, 415.30, 659.25].forEach((freq, idx) => {
-          const osc = chimeAudioCtx.createOscillator();
-          const gain = chimeAudioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.22);
-          gain.gain.setValueAtTime(0.001, now + idx * 0.22);
-          gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.22 + 0.015);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.22 + 0.45);
-          osc.connect(gain);
-          gain.connect(chimeAudioCtx.destination);
-          osc.start(now + idx * 0.22);
-          osc.stop(now + idx * 0.22 + 0.48);
-        });
-      });
-    }
+    const el = getSeatbeltAudioElement();
+    el.currentTime = 0;
+    el.play().catch(() => {});
   } catch (e) {}
 }
 
 function syncSeatbeltChimeLoop() {
-  // Bunyikan alarm saat seatbelt lepas dan kendaraan aktif / bergerak / baru dimuat
   const shouldWarn = !isSeatbeltOn && (isEngineOn || currentSpeedConverted > 0);
   if (shouldWarn && !chimeTimer) {
     playSeatbeltChime();
-    chimeTimer = setInterval(playSeatbeltChime, 2300);
+    chimeTimer = setInterval(playSeatbeltChime, 2200);
   } else if (!shouldWarn && chimeTimer) {
     clearInterval(chimeTimer);
     chimeTimer = null;
+    const el = document.getElementById('seatbeltSound');
+    if (el) { el.pause(); el.currentTime = 0; }
   }
 }
 
 function updateSeatbeltIndicator() {
   const beltEl = document.getElementById('indBelt');
   if (!beltEl) return;
-  if (isSeatbeltOn) {
-    beltEl.className = 'ind-text green';
-  } else {
-    beltEl.className = 'ind-text warn';
-  }
+  beltEl.className = isSeatbeltOn ? 'ind-text green' : 'ind-text warn';
   syncSeatbeltChimeLoop();
 }
 
@@ -229,7 +199,7 @@ function setSeatbelts(state) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  ensureChimeAudio();
+  getSeatbeltAudioElement();
   updateSeatbeltIndicator();
 });
 
