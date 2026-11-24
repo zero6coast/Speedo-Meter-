@@ -33,13 +33,14 @@ html, body {
   position: fixed;
   right: 4vw;
   bottom: 6vh;
-  perspective: 900px;
+  perspective: 650px;
   pointer-events: none;
 }
 
 .holo-hud {
   width: 310px;
-  transform: rotateY(-12deg) rotateX(10deg) skewX(-4deg);
+  transform: rotateY(-18deg) rotateX(14deg) skewX(-6deg);
+  transform-style: preserve-3d;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
 }
 
