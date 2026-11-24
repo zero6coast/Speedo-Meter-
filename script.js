@@ -1,5 +1,5 @@
 // =========================================================================
-// JGVRP OFFICIAL SPEEDOMETER API — 3D HOLOGRAM (PORSCHE SEATBELT CHIME)
+// JGVRP OFFICIAL SPEEDOMETER API — 3D HOLOGRAM (SOFT PORSCHE SEATBELT CHIME)
 // =========================================================================
 let speedMode = 0;
 let lastRawSpeedMs = 0;
@@ -8,10 +8,10 @@ let isEngineOn = false;
 let isSeatbeltOn = false;
 let chimeTimer = null;
 
-// Membangkitkan data URI WAV chime Porsche Macan/992/Taycan
+// Membangkitkan data URI WAV chime Porsche lembut & halus (tidak berisik)
 function buildPorscheChimeDataUrl() {
   const sampleRate = 22050;
-  const duration = 1.65;
+  const duration = 1.85;
   const numSamples = Math.floor(sampleRate * duration);
   const buffer = new ArrayBuffer(44 + numSamples * 2);
   const view = new DataView(buffer);
@@ -34,10 +34,10 @@ function buildPorscheChimeDataUrl() {
   view.setUint32(40, numSamples * 2, true);
 
   const notes = [
-    { start: 0.00, dur: 0.42, f1: 659.25, f2: 1318.51, amp: 0.34 },
-    { start: 0.22, dur: 0.42, f1: 493.88, f2: 987.77,  amp: 0.32 },
-    { start: 0.44, dur: 0.46, f1: 415.30, f2: 830.61,  amp: 0.32 },
-    { start: 0.72, dur: 0.88, f1: 659.25, f2: 987.77,  amp: 0.36 }
+    { start: 0.00, dur: 0.52, f1: 659.25, f2: 1318.51, amp: 0.14 },
+    { start: 0.24, dur: 0.52, f1: 493.88, f2: 987.77,  amp: 0.13 },
+    { start: 0.48, dur: 0.56, f1: 415.30, f2: 830.61,  amp: 0.13 },
+    { start: 0.78, dur: 1.02, f1: 659.25, f2: 987.77,  amp: 0.15 }
   ];
 
   for (let i = 0; i < numSamples; i++) {
@@ -47,10 +47,10 @@ function buildPorscheChimeDataUrl() {
       const note = notes[n];
       const dt = t - note.start;
       if (dt >= 0 && dt <= note.dur) {
-        const attack = Math.min(1, dt / 0.015);
-        const decay = Math.exp(-dt * (n === 3 ? 3.8 : 6.2));
+        const attack = Math.min(1, dt / 0.045);
+        const decay = Math.exp(-dt * (n === 3 ? 3.2 : 5.0));
         const env = attack * decay * note.amp;
-        const wave = Math.sin(2 * Math.PI * note.f1 * dt) + 0.35 * Math.sin(2 * Math.PI * note.f2 * dt);
+        const wave = Math.sin(2 * Math.PI * note.f1 * dt) + 0.16 * Math.sin(2 * Math.PI * note.f2 * dt);
         sample += wave * env;
       }
     }
@@ -73,7 +73,7 @@ function getSeatbeltAudioElement() {
   }
   if (!el.src) {
     el.src = buildPorscheChimeDataUrl();
-    el.volume = 1.0;
+    el.volume = 0.42;
   }
   return el;
 }
@@ -91,7 +91,7 @@ function syncSeatbeltChimeLoop() {
   const shouldWarn = !isSeatbeltOn && (isEngineOn || currentSpeedConverted > 0);
   if (shouldWarn && !chimeTimer) {
     playSeatbeltChime();
-    chimeTimer = setInterval(playSeatbeltChime, 2200);
+    chimeTimer = setInterval(playSeatbeltChime, 3400);
   } else if (!shouldWarn && chimeTimer) {
     clearInterval(chimeTimer);
     chimeTimer = null;
